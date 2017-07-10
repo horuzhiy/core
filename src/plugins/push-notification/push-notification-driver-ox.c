@@ -209,7 +209,7 @@ static bool push_notification_driver_ox_begin_txn
     const char *const *args;
     struct push_notification_event_messagenew_config *config;
     const char *key, *mbox_curr, *md_value, *value;
-    bool mbox_found = FALSE;
+    bool mbox_found = TRUE;
     struct push_notification_driver_ox_txn *txn;
 
     md_value = push_notification_driver_ox_get_metadata(dtxn);
@@ -232,12 +232,12 @@ static bool push_notification_driver_ox_begin_txn
     }
 
     mbox_curr = mailbox_get_vname(dtxn->ptxn->mbox);
-    for (; *mboxes != NULL; mboxes++) {
-        if (strcmp(mbox_curr, *mboxes) == 0) {
-            mbox_found = TRUE;
-            break;
-        }
-    }
+//    for (; *mboxes != NULL; mboxes++) {
+//        if (strcmp(mbox_curr, *mboxes) == 0) {
+//            mbox_found = TRUE;
+//            break;
+//        }
+//    }
 
     if (mbox_found == FALSE) {
         push_notification_driver_debug(OX_LOG_LABEL, user,
