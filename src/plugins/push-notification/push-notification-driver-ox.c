@@ -348,7 +348,6 @@ static void push_notification_driver_ox_process_msg
     struct push_notification_driver_ox_config *dconfig =
         (struct push_notification_driver_ox_config *)dtxn->duser->context;
     struct http_client_request *http_req;
-    struct push_notification_event_messagenew_data *messagenew;
     struct istream *payload;
     string_t *str;
     struct push_notification_driver_ox_txn *txn =
@@ -361,50 +360,87 @@ static void push_notification_driver_ox_process_msg
         status_success = FALSE;
     }
 
-    messagenew = push_notification_txn_msg_get_eventdata(msg, "MessageNew");
-    if (messagenew == NULL) {
-	    	messagenew = push_notification_txn_msg_get_eventdata(msg, "MessageAppend");
-	    	if (messagenew == NULL) {
-	    		return;
-	    	}
-    }
+    struct push_notification_event_messagenew_data *messagenew = push_notification_txn_msg_get_eventdata(msg, "MessageNew");
+    if(messagenew != NULL) {
+		    push_notification_driver_ox_init_global(user, dconfig);
 
-    push_notification_driver_ox_init_global(user, dconfig);
+		    http_req = http_client_request_url(ox_global->http_client, "PUT",
+		                                       dconfig->http_url,
+		                                       push_notification_driver_ox_http_callback,
+		                                       user);
 
-    http_req = http_client_request_url(ox_global->http_client, "PUT",
-                                       dconfig->http_url,
-                                       push_notification_driver_ox_http_callback,
-                                       user);
+		    http_client_request_add_header(http_req, "Content-Type",
+		                                   "application/json; charset=utf-8");
 
-    http_client_request_add_header(http_req, "Content-Type",
-                                   "application/json; charset=utf-8");
-
-    str = str_new(default_pool, 256);
-    str_append(str, "{\"user\":\"");
-    json_append_escaped(str, dconfig->use_unsafe_username ?
-                        txn->unsafe_user : user->username);
-    str_append(str, "\",\"event\":\"messageNew\",\"folder\":\"");
-    json_append_escaped(str, msg->mailbox);
-    str_printfa(str, "\",\"imap-uidvalidity\":%u,\"imap-uid\":%u",
-                msg->uid_validity, msg->uid);
-    if (messagenew->from != NULL) {
-        str_append(str, ",\"from\":\"");
-        json_append_escaped(str, messagenew->from);
-    }
-    if (messagenew->subject != NULL) {
-        str_append(str, "\",\"subject\":\"");
-        json_append_escaped(str, messagenew->subject);
-    }
-    if (messagenew->snippet != NULL) {
-        str_append(str, "\",\"snippet\":\"");
-        json_append_escaped(str, messagenew->snippet);
-    }
-    if (status_success) {
-        str_printfa(str, "\",\"unseen\":%u", box_status.unseen);
+		    str = str_new(default_pool, 256);
+		    str_append(str, "{\"user\":\"");
+		    json_append_escaped(str, dconfig->use_unsafe_username ?
+		                        txn->unsafe_user : user->username);
+		    str_append(str, "\",\"event\":\"messageNew\",\"folder\":\"");
+		    json_append_escaped(str, msg->mailbox);
+		    str_printfa(str, "\",\"imap-uidvalidity\":%u,\"imap-uid\":%u",
+		                msg->uid_validity, msg->uid);
+		    if (messagenew->from != NULL) {
+		        str_append(str, ",\"from\":\"");
+		        json_append_escaped(str, messagenew->from);
+		    }
+		    if (messagenew->subject != NULL) {
+		        str_append(str, "\",\"subject\":\"");
+		        json_append_escaped(str, messagenew->subject);
+		    }
+		    if (messagenew->snippet != NULL) {
+		        str_append(str, "\",\"snippet\":\"");
+		        json_append_escaped(str, messagenew->snippet);
+		    }
+		    if (status_success) {
+		        str_printfa(str, "\",\"unseen\":%u", box_status.unseen);
+		    } else {
+		        str_append(str, "\"");
+		    }
+		    str_append(str, "}");
     } else {
-        str_append(str, "\"");
+	    	struct push_notification_event_messageappend_data *messageappend = push_notification_txn_msg_get_eventdata(msg, "MessageAppend");
+		    if(messageappend != NULL) {
+				    push_notification_driver_ox_init_global(user, dconfig);
+
+				    http_req = http_client_request_url(ox_global->http_client, "PUT",
+				                                       dconfig->http_url,
+				                                       push_notification_driver_ox_http_callback,
+				                                       user);
+
+				    http_client_request_add_header(http_req, "Content-Type",
+				                                   "application/json; charset=utf-8");
+
+				    str = str_new(default_pool, 256);
+				    str_append(str, "{\"user\":\"");
+				    json_append_escaped(str, dconfig->use_unsafe_username ?
+				                        txn->unsafe_user : user->username);
+				    str_append(str, "\",\"event\":\"messageAppend\",\"folder\":\"");
+				    json_append_escaped(str, msg->mailbox);
+				    str_printfa(str, "\",\"imap-uidvalidity\":%u,\"imap-uid\":%u",
+				                msg->uid_validity, msg->uid);
+				    if (messageappend->from != NULL) {
+				        str_append(str, ",\"from\":\"");
+				        json_append_escaped(str, messageappend->from);
+				    }
+				    if (messageappend->subject != NULL) {
+				        str_append(str, "\",\"subject\":\"");
+				        json_append_escaped(str, messageappend->subject);
+				    }
+				    if (messageappend->snippet != NULL) {
+				        str_append(str, "\",\"snippet\":\"");
+				        json_append_escaped(str, messageappend->snippet);
+				    }
+				    if (status_success) {
+				        str_printfa(str, "\",\"unseen\":%u", box_status.unseen);
+				    } else {
+				        str_append(str, "\"");
+				    }
+				    str_append(str, "}");
+				} else {
+				    return;
+				}
     }
-    str_append(str, "}");
 
     push_notification_driver_debug(OX_LOG_LABEL, user,
                                    "Sending notification: %s", str_c(str));
