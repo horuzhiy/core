@@ -367,7 +367,6 @@ static void push_notification_driver_ox_process_msg
 	    	if (messagenew == NULL) {
 	    		return;
 	    	}
-        return;
     }
 
     push_notification_driver_ox_init_global(user, dconfig);
