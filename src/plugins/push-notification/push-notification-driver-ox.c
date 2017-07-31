@@ -14,6 +14,7 @@
 
 #include "push-notification-drivers.h"
 #include "push-notification-event-messagenew.h"
+#include "push-notification-event-messageappend.h"
 #include "push-notification-events.h"
 #include "push-notification-txn-msg.h"
 
