@@ -24,7 +24,7 @@
     MAILBOX_ATTRIBUTE_PREFIX_DOVECOT_PVT_SERVER "vendor/vendor.dovecot/http-notify"
 
 /* Default values. */
-static const char *const default_events[] = { "MessageNew", NULL };
+static const char *const default_events[] = { "MessageNew", "MessageAppend", NULL };
 static const char *const default_mboxes[] = { "INBOX", NULL };
 #define DEFAULT_CACHE_LIFETIME_SECS 60
 #define DEFAULT_TIMEOUT_MSECS 2000
@@ -270,16 +270,15 @@ static bool push_notification_driver_ox_begin_txn
     push_notification_driver_debug(OX_LOG_LABEL, user, "User (%s)", txn->unsafe_user);
 
     for (; *events != NULL; events++) {
-        if (strcmp(*events, "MessageNew") == 0) {
+//        if (strcmp(*events, "MessageNew") == 0) {
             config = p_new(dtxn->ptxn->pool,
                            struct push_notification_event_messagenew_config, 1);
             config->flags = PUSH_NOTIFICATION_MESSAGE_HDR_FROM |
                             PUSH_NOTIFICATION_MESSAGE_HDR_SUBJECT |
                             PUSH_NOTIFICATION_MESSAGE_BODY_SNIPPET;
-            push_notification_event_init(dtxn, "MessageNew", config);
-            push_notification_driver_debug(OX_LOG_LABEL, user,
-                                           "Handling MessageNew event");
-        }
+            push_notification_event_init(dtxn, *events, config);
+            push_notification_driver_debug(OX_LOG_LABEL, user, "Handling %s event", *events);
+//        }
     }
 
     dtxn->context = txn;
@@ -364,6 +363,10 @@ static void push_notification_driver_ox_process_msg
 
     messagenew = push_notification_txn_msg_get_eventdata(msg, "MessageNew");
     if (messagenew == NULL) {
+	    	messagenew = push_notification_txn_msg_get_eventdata(msg, "MessageAppend");
+	    	if (messagenew == NULL) {
+	    		return;
+	    	}
         return;
     }
 
